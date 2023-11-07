@@ -15,7 +15,7 @@ def get_response(session, url):
             f'Возникла ошибка при загрузке страницы {url}',
             stack_info=True
         )
-
+        raise
 
 def find_tag(soup, tag, attrs=None):
     searched_tag = soup.find(tag, attrs=(attrs or {}))

@@ -8,7 +8,7 @@ import requests_cache
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-from constants import BASE_DIR, MAIN_DOC_URL, DATETIME_FORMAT
+from constants import BASE_DIR, MAIN_DOC_URL, MAIN_PEP_URL, DATETIME_FORMAT, EXPECTED_STATUS
 from configs import configure_argument_parser, configure_logging
 from outputs import control_output
 from utils import get_response, find_tag
@@ -21,7 +21,7 @@ def whats_new(session):
     main_div = find_tag(soup, 'section', attrs={'id': 'what-s-new-in-python'})
     div_with_ul = find_tag(main_div, 'div', attrs={'class': 'toctree-wrapper'})
     sections_by_python = div_with_ul.find_all('li', attrs={'class': 'toctree-l1'})
-    results = [('Ссылка на статью', 'Заголовок', 'Редактор, автор')]
+    results = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
     for section in tqdm(sections_by_python):
         version_a_tag = find_tag(section, 'a')
         href = version_a_tag['href']
@@ -90,10 +90,60 @@ def download(session):
     logging.info(f'Архив был загружен и сохранён: {archives_dir}')
 
 
+def pep(session):
+    response = get_response(session, MAIN_PEP_URL)
+    soup = BeautifulSoup(response.text, features='lxml')
+    section = find_tag(soup, 'section', {'id': 'numerical-index'})
+    tbody = find_tag(section, 'tbody')
+    table_rows = tbody.find_all('tr')
+    pep_count_by_status = {}
+    for table_row in tqdm(table_rows):
+        row_cells = table_row.find_all('td')
+        # pep_type_code = row_cells[0].text[0]
+        pep_number = row_cells[1].text
+        pep_status_code = row_cells[0].text[1:]
+        pep_ref = row_cells[1].a['href']
+        pep_status = get_pep_status(session, pep_ref)
+        expected_pep_statuses = EXPECTED_STATUS[pep_status_code]
+        if pep_status not in expected_pep_statuses:
+            logging.info(
+f'''Несовпадающие статусы:
+{pep_ref} 
+Статус в карточке: {pep_status} 
+Ожидаемые статусы: {expected_pep_statuses}.
+''')
+
+        pep_count_by_status[pep_status] = (
+            pep_count_by_status.get(pep_status, 0) + 1
+        )
+
+    results = [('Статус', 'Количество')]
+    for status, count in pep_count_by_status.items():
+        results.append((status, count))
+
+    results.append(('Total', len(table_rows)))
+    return results
+
+
+def get_pep_status(session, ref):
+    response = get_response(session, urljoin(MAIN_PEP_URL, ref))
+    soup = BeautifulSoup(response.text, features='lxml')
+    dl_tag = find_tag(soup, 'section', {'id': 'pep-content'}).dl
+    dt_tag = find_tag(
+        dl_tag, lambda tag: tag.name == 'dt' and 'Status' in tag.text
+    )
+    dd_tag = dt_tag.next_sibling
+    while dd_tag.name != 'dd':
+        dd_tag = dd_tag.next_sibling
+    
+    return str(dd_tag.string)
+
+
 MODE_TO_FUNCTION = {
     'whats-new': whats_new,
     'latest-versions': latest_versions,
     'download': download,
+    'pep': pep,
 }
 
 
