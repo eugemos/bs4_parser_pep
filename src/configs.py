@@ -44,4 +44,4 @@ def configure_logging():
         format=LOG_FORMAT,
         level=logging.INFO,
         handlers=(rotating_handler, logging.StreamHandler())
-    ) 
+    )
