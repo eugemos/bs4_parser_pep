@@ -2,8 +2,20 @@ from pathlib import Path
 
 MAIN_DOC_URL = 'https://docs.python.org/3/'
 MAIN_PEP_URL = 'https://peps.python.org/'
+
 BASE_DIR = Path(__file__).parent
+RESULTS_DIR_NAME = 'results'
+DOWNLOADS_DIR_NAME = 'downloads'
+LOG_DIR_NAME = 'logs'
+LOG_FILE_NAME = 'parser.log'
+
 DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
+
+PRETTY_OUT_MODE = 'pretty'
+FILE_OUT_MODE = 'file'
+
+LOG_DATETIME_FORMAT = '%d.%m.%Y %H:%M:%S'
+LOG_FORMAT = '"%(asctime)s - [%(levelname)s] - %(message)s"'
 
 EXPECTED_STATUS = {
     'A': ('Active', 'Accepted'),
